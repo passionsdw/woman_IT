@@ -1,0 +1,11 @@
+# 대용량 파일 (GitHub 100MB 제한 초과 — 업로드 제외)
+GoogleDriveSetup.exe
+*.pdf
+
+# Claude Code 로컬 설정
+.claude/
+
+# 시스템 파일
+Thumbs.db
+Desktop.ini
+.DS_Store

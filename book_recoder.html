@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>나만의 독서 기록</title>
+  
+  <!-- 예쁜 디자인을 위해 Tailwind CSS를 불러와요 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 아이콘을 사용하기 위해 Lucide 아이콘을 불러와요 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- 슈퍼베이스(Supabase) 데이터베이스를 사용하기 위해 불러와요 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="min-h-screen bg-stone-100 font-sans text-stone-800 p-4 md:p-8">
+
+  <div class="max-w-4xl mx-auto space-y-8">
+    
+    <!-- 1. 위쪽 제목 부분 -->
+    <header class="flex items-center gap-3 border-b-2 border-stone-300 pb-4">
+      <div class="bg-amber-600 p-3 rounded-2xl text-white shadow-md">
+        <i data-lucide="library" class="w-8 h-8"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-stone-900 tracking-tight">나만의 서재</h1>
+        <p class="text-stone-500 font-medium mt-1">나의 독서 여정을 기록해보세요</p>
+      </div>
+    </header>
+
+    <!-- 2. 새로운 책을 입력하는 부분 -->
+    <section class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+      <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+        <i data-lucide="plus" class="w-5 h-5 text-amber-600"></i>새로운 책 기록하기
+      </h2>
+      
+      <!-- 책 정보를 입력받는 폼(Form) 시작 -->
+      <form id="book-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- 책 제목 -->
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-stone-600 flex items-center gap-1">
+            <i data-lucide="book-open" class="w-4 h-4"></i> 책 제목
+          </label>
+          <input type="text" id="title-input" placeholder="예: 어린 왕자" required
+                 class="w-full px-4 py-2 bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors">
+        </div>
+
+        <!-- 지은이 (저자) -->
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-stone-600 flex items-center gap-1">
+            <i data-lucide="user" class="w-4 h-4"></i> 저자
+          </label>
+          <input type="text" id="author-input" placeholder="예: 앙투안 드 생텍쥐페리" required
+                 class="w-full px-4 py-2 bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors">
+        </div>
+
+        <!-- 읽은 날짜 -->
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-stone-600 flex items-center gap-1">
+            <i data-lucide="calendar" class="w-4 h-4"></i> 읽은 날짜
+          </label>
+          <input type="date" id="date-input" required
+                 class="w-full px-4 py-2 bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors">
+        </div>
+
+        <!-- 별점 주기 -->
+        <div class="space-y-1">
+          <label class="text-sm font-medium text-stone-600 flex items-center gap-1">
+            <i data-lucide="star" class="w-4 h-4"></i> 별점
+          </label>
+          <div class="flex items-center h-[42px] gap-1 px-2" id="star-container">
+            <!-- 자바스크립트로 별 5개를 만들어 줄 거예요 -->
+          </div>
+        </div>
+
+        <!-- 저장 버튼 -->
+        <div class="md:col-span-2 pt-2">
+          <button type="submit" class="w-full bg-stone-900 hover:bg-stone-800 text-white font-medium py-3 rounded-lg transition-colors shadow-sm">
+            기록 추가하기
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 3. 내가 기록한 책 목록을 보여주는 부분 -->
+    <section>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold flex items-center gap-2">
+          <i data-lucide="book-open" class="w-5 h-5 text-stone-600"></i>내 독서 기록
+          <span id="book-count" class="bg-stone-200 text-stone-600 text-xs px-2 py-1 rounded-full font-bold">0</span>
+        </h2>
+      </div>
+
+      <!-- 검색 및 정렬 기능 (새로 추가된 부분!) -->
+      <div class="flex flex-col sm:flex-row gap-3 mb-6 bg-white p-3 rounded-xl border border-stone-200 shadow-sm">
+        <div class="flex-1 relative">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400"></i>
+          <input type="text" id="search-input" placeholder="책 제목이나 저자 이름으로 검색해보세요" 
+                 class="w-full pl-9 pr-4 py-2 bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors text-sm">
+        </div>
+        <select id="sort-select" class="px-4 py-2 bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors text-sm font-medium text-stone-700">
+          <option value="latest">최신순 (최근에 추가한 순서)</option>
+          <option value="rating-high">별점 높은 순</option>
+          <option value="rating-low">별점 낮은 순</option>
+        </select>
+      </div>
+
+      <!-- 책이 하나도 없을 때 보여줄 화면 -->
+      <div id="empty-state" class="bg-stone-50 border-2 border-dashed border-stone-300 rounded-2xl p-12 text-center text-stone-500">
+        <i data-lucide="book-open" class="w-12 h-12 mx-auto mb-4 text-stone-300"></i>
+        <p class="text-lg font-medium">아직 기록된 책이 없어요.</p>
+        <p class="text-sm mt-1">위 폼을 사용해 첫 번째 독서 기록을 남겨보세요!</p>
+      </div>
+
+      <!-- 책 카드가 나열될 공간 -->
+      <div id="books-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+        <!-- 책 카드가 여기에 추가됩니다 -->
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 자바스크립트 코드 시작 (앱이 움직이게 하는 마법!) -->
+  <script>
+    // 1. 필요한 HTML 요소(태그)들을 찾아와서 변수에 담아요
+    const form = document.getElementById('book-form');
+    const titleInput = document.getElementById('title-input');
+    const authorInput = document.getElementById('author-input');
+    const dateInput = document.getElementById('date-input');
+    const starContainer = document.getElementById('star-container');
+    const booksGrid = document.getElementById('books-grid');
+    const emptyState = document.getElementById('empty-state');
+    const bookCount = document.getElementById('book-count');
+    
+    // 새로 추가된 검색, 정렬 요소들
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+
+    // ★ 슈퍼베이스(Supabase) 설정하기 ★
+    // 주의: 진짜 데이터베이스를 쓰려면 회원가입 후 아래 URL과 KEY를 받아와서 바꿔야 해요!
+    const SUPABASE_URL = 'https://scgsynjkzglagzylrknb.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_3zyVEv-0FnQGxPF0_Ak5EA_Iim8p6Ys';
+    
+    // 키를 넣기 전에는 임시로 브라우저 저장을 쓰도록 할게요 (미리보기 화면이 망가지지 않게)
+    const isSupabaseReady = SUPABASE_URL.startsWith('http');
+    const supabaseClient = isSupabaseReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+    // 2. 데이터를 저장할 공간과 별점 점수
+    let books = []; 
+    let currentRating = 0; // 선택한 별점
+
+    // 3. 별 모양 5개 그리기 설정
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      // SVG는 그림을 그리는 코드예요.
+      starsHtml += `
+        <button type="button" data-value="${i}" class="star-btn focus:outline-none transition-transform hover:scale-110">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="star-icon fill-stone-200 text-stone-300 transition-colors duration-200">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </button>
+      `;
+    }
+    starsHtml += `<span id="rating-text" class="ml-2 text-sm font-medium text-stone-500">평가해주세요</span>`;
+    starContainer.innerHTML = starsHtml;
+
+    // 별 버튼 이벤트 달아주기 (마우스 올릴 때, 뗄 때, 클릭할 때)
+    const starBtns = document.querySelectorAll('.star-btn');
+    const ratingText = document.getElementById('rating-text');
+
+    starBtns.forEach(btn => {
+      // 마우스를 올렸을 때
+      btn.addEventListener('mouseenter', (e) => {
+        const val = parseInt(e.currentTarget.dataset.value);
+        updateStars(val, true);
+      });
+      // 마우스를 뗐을 때 (원래 선택한 점수로 복구)
+      btn.addEventListener('mouseleave', () => {
+        updateStars(currentRating, false);
+      });
+      // 마우스를 클릭했을 때 (점수 확정)
+      btn.addEventListener('click', (e) => {
+        currentRating = parseInt(e.currentTarget.dataset.value);
+        updateStars(currentRating, false);
+      });
+    });
+
+    // 별 색깔을 바꿔주는 함수
+    function updateStars(value, isHover) {
+      starBtns.forEach(btn => {
+        const starVal = parseInt(btn.dataset.value);
+        const svg = btn.querySelector('.star-icon');
+        if (starVal <= value) {
+          svg.classList.add('fill-amber-400', 'text-amber-400');
+          svg.classList.remove('fill-stone-200', 'text-stone-300');
+        } else {
+          svg.classList.remove('fill-amber-400', 'text-amber-400');
+          svg.classList.add('fill-stone-200', 'text-stone-300');
+        }
+      });
+
+      if (!isHover) {
+        if (currentRating > 0) {
+          ratingText.textContent = currentRating + "점";
+        } else {
+          ratingText.textContent = "평가해주세요";
+        }
+      }
+    }
+
+    // 4. 기록 추가하기 (폼 제출) - 데이터베이스 저장 기능 추가!
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault(); // 새로고침 되는 걸 막아줘요
+
+      // 빈칸이 있는지 확인
+      if (!titleInput.value.trim() || !authorInput.value.trim() || !dateInput.value) {
+        alert('모든 칸을 채워주세요!');
+        return;
+      }
+
+      // 버튼 비활성화 (저장 중임을 표시)
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = '저장하는 중...';
+      submitBtn.disabled = true;
+
+      // 새 책 정보를 만들어요
+      const newBook = {
+        id: Date.now().toString(), // 아이디 만들기
+        title: titleInput.value,
+        author: authorInput.value,
+        date: dateInput.value,
+        rating: currentRating
+      };
+
+      if (isSupabaseReady) {
+        // 슈퍼베이스(진짜 창고)에 저장해요!
+        const { error } = await supabaseClient.from('books').insert([newBook]);
+        if (error) {
+          alert('저장하는데 문제가 생겼어요: ' + error.message);
+        }
+      } else {
+        // 키가 없으면 예전처럼 브라우저(가짜 창고)에 저장해요
+        books.unshift(newBook);
+        localStorage.setItem('myBookLog', JSON.stringify(books));
+      }
+      
+      // 입력했던 칸들 비우기
+      form.reset();
+      currentRating = 0;
+      updateStars(0, false);
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+
+      // 데이터 다시 불러와서 화면 그리기
+      await fetchBooks();
+    });
+
+    // 5. 책 지우기 기능 - 데이터베이스 삭제 기능 추가!
+    async function deleteBook(id) {
+      if (confirm('정말 이 기록을 지울까요?')) {
+        if (isSupabaseReady) {
+          // 슈퍼베이스에서 지우기
+          await supabaseClient.from('books').delete().eq('id', id);
+        } else {
+          // 브라우저에서 지우기
+          books = books.filter(book => book.id !== id);
+          localStorage.setItem('myBookLog', JSON.stringify(books));
+        }
+        // 화면 다시 그리기
+        await fetchBooks();
+      }
+    }
+
+    // 6-1. 데이터베이스에서 책 목록 불러오기
+    async function fetchBooks() {
+      if (isSupabaseReady) {
+        // 슈퍼베이스에서 가져오기
+        const { data, error } = await supabaseClient.from('books').select('*');
+        if (error) {
+          console.error('불러오기 에러:', error);
+          books = [];
+        } else {
+          // 불러온 데이터를 저장 (id순으로 정렬하면 예전 기록이 뒤로 가요)
+          books = data; 
+        }
+      } else {
+        // 예전처럼 브라우저에서 가져오기
+        books = JSON.parse(localStorage.getItem('myBookLog')) || [];
+      }
+      
+      renderBooks();
+    }
+
+    // 6-2. 화면에 예쁘게 보여주기 (검색과 정렬 기능 포함!)
+    function renderBooks() {
+      // 검색창에 입력한 글자 가져오기 (소문자로 바꿔서 비교하기 쉽게 해요)
+      const searchTerm = searchInput.value.toLowerCase();
+      const sortType = sortSelect.value;
+
+      // 1단계: 검색어로 걸러내기 (책 제목이나 저자 이름 포함)
+      let displayBooks = books.filter(book => 
+        book.title.toLowerCase().includes(searchTerm) || 
+        book.author.toLowerCase().includes(searchTerm)
+      );
+
+      // 2단계: 선택한 순서대로 줄 세우기 (정렬)
+      displayBooks.sort((a, b) => {
+        if (sortType === 'rating-high') {
+          return b.rating - a.rating; // 별점 높은 순
+        } else if (sortType === 'rating-low') {
+          return a.rating - b.rating; // 별점 낮은 순
+        } else {
+          // 최신순 (id가 시간으로 만들어져서 이걸로 비교하면 최신이 먼저 와요)
+          return b.id.localeCompare(a.id); 
+        }
+      });
+      
+      // 책 개수 업데이트
+      bookCount.textContent = displayBooks.length;
+
+      if (displayBooks.length === 0) {
+        // 책이 없으면 빈 화면 보여주기
+        emptyState.classList.remove('hidden');
+        booksGrid.classList.add('hidden');
+      } else {
+        // 책이 있으면 빈 화면 숨기고 책 목록 보여주기
+        emptyState.classList.add('hidden');
+        booksGrid.classList.remove('hidden');
+        
+        // HTML 코드를 만들어서 리스트에 넣어요
+        booksGrid.innerHTML = displayBooks.map(book => `
+          <div class="bg-white p-5 rounded-2xl shadow-sm border border-stone-200 hover:shadow-md transition-shadow relative group flex flex-col h-full">
+            <!-- 삭제 버튼! 항상 반투명하게 보이게 수정했어요 -->
+            <button onclick="deleteBook('${book.id}')" class="absolute top-4 right-4 text-stone-400 hover:text-red-500 transition-colors opacity-60 group-hover:opacity-100" aria-label="기록 삭제">
+              <i data-lucide="trash-2" class="w-[18px] h-[18px]"></i>
+            </button>
+            
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-stone-900 mb-1 pr-6 leading-tight line-clamp-2">${book.title}</h3>
+              <p class="text-stone-500 text-sm mb-4 line-clamp-1">${book.author}</p>
+            </div>
+            
+            <div class="mt-auto pt-4 border-t border-stone-100 flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400"></i>
+                <span class="font-semibold text-stone-700">${book.rating}</span>
+                <span class="text-xs text-stone-400">/ 5</span>
+              </div>
+              <span class="text-xs text-stone-500 flex items-center gap-1">
+                <i data-lucide="calendar" class="w-3 h-3"></i>
+                ${book.date}
+              </span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 방금 새로 만든 HTML 태그들에 있는 아이콘(lucide)을 그림으로 바꿔줘요
+      lucide.createIcons();
+    }
+
+    // 검색창에 글자를 칠 때마다 화면 다시 그리기
+    searchInput.addEventListener('input', renderBooks);
+    
+    // 정렬 순서를 바꿀 때마다 화면 다시 그리기
+    sortSelect.addEventListener('change', renderBooks);
+
+    // 7. 맨 처음 화면이 켜졌을 때 실행!
+    fetchBooks();
+  </script>
+</body>
+</html>
